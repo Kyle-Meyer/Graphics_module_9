@@ -44,16 +44,6 @@ class LightingShaderNode : public ShaderNode
     void set_global_ambient(const Color4 &global_ambient);
 
     /**
-     * Set properties of a single light source.  This sets uniforms in the
-     * shader directly. In Module 9 a LightNode scene node will be created.
-     */
-    void set_light(uint32_t       n,
-                   const HPoint3 &position,
-                   const Color4  &ambient,
-                   const Color4  &diffuse,
-                   const Color4  &specular);
-
-    /**
      * Get the location of the vertex position attribute.
      * @return  Returns the vertex position attribute location.
      */

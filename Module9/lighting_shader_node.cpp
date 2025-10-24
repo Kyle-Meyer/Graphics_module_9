@@ -110,7 +110,13 @@ void LightingShaderNode::draw(SceneState &scene_state)
     scene_state.material_diffuse_loc = material_diffuse_loc_;
     scene_state.material_specular_loc = material_specular_loc_;
     scene_state.material_emission_loc = material_emission_loc_;
-    scene_state.material_shininess_loc = material_shininess_loc_;
+    scene_state.material_shininess_loc = material_shininess_loc_; 
+   //Pass light uniform locations to scene state
+   // so LightNodes can access them
+   for(int i = 0; i < light_count_; i++)
+   {
+      scene_state.lights[i] = lights_[i];
+   }
 
     // Draw all children
     SceneNode::draw(scene_state);
@@ -120,20 +126,6 @@ void LightingShaderNode::set_global_ambient(const Color4 &global_ambient)
 {
     shader_program_.use();
     glUniform4fv(global_ambient_loc_, 1, &global_ambient.r);
-}
-
-void LightingShaderNode::set_light(uint32_t       n,
-                                   const HPoint3 &position,
-                                   const Color4  &ambient,
-                                   const Color4  &diffuse,
-                                   const Color4  &specular)
-{
-    shader_program_.use();
-    glUniform1i(lights_[n].enabled, 1);
-    glUniform4fv(lights_[n].position, 1, &position.x);
-    glUniform4fv(lights_[n].ambient, 1, &ambient.r);
-    glUniform4fv(lights_[n].diffuse, 1, &diffuse.r);
-    glUniform4fv(lights_[n].specular, 1, &specular.r);
 }
 
 int LightingShaderNode::get_position_loc() const { return position_loc_; }

@@ -23,6 +23,8 @@
 #include <iostream>
 #include <thread>
 #include <vector>
+#include <Module9/torus.hpp>
+#include "Module9/light_node.hpp"
 
 namespace cg
 {
@@ -554,31 +556,34 @@ std::shared_ptr<cg::SceneNode> construct_shiny_sphere(int32_t position_loc, int3
  * into the shader node for this exercise.
  * @param  lighting  Pointer to the lighting shader node.
  */
-void construct_lighting(std::shared_ptr<cg::LightingShaderNode> lighting)
+void construct_lighting(std::shared_ptr<cg::CameraNode> camera,
+                        std::shared_ptr<cg::LightingShaderNode> shader)
 {
     // Set the global light ambient
     cg::Color4 global_ambient(0.4f, 0.4f, 0.4f, 1.0f);
-    lighting->set_global_ambient(global_ambient);
+    shader->set_global_ambient(global_ambient);
 
-    // Light 0 - a point light source located at the back right corner. Note the
-    // w component is 1. This light is somewhat dim. No ambient - let the global
-    // ambient control the ambient lighting
+    // Light 0 - a point light source located at the back right corner
+    // Note the w component is 1. This light is somewhat dim.
+    // No ambient - let the global ambient control the ambient lighting
     cg::HPoint3 position_0(75.0f, 75.0f, 30.0f, 1.0f);
     cg::Color4  ambient_0(0.0f, 0.0f, 0.0f, 1.0f);
     cg::Color4  diffuse_0(0.5f, 0.5f, 0.5f, 1.0f);
     cg::Color4  specular_0(0.5f, 0.5f, 0.5f, 1.0f);
-    lighting->set_light(0, position_0, ambient_0, diffuse_0, specular_0);
+    
+    auto light0 = std::make_shared<cg::LightNode>(0, position_0, ambient_0, diffuse_0, specular_0);
+    camera->add_child(light0);
 
-    // Light 1 - a directional light from above. Note the w component is 0.
-    // This light is somewhat bright. No ambient - let the global ambient
-    // control the ambient lighting
+    // Light 1 - a directional light from above
+    // Note the w component is 0. This light is somewhat bright.
+    // No ambient - let the global ambient control the ambient lighting
     cg::HPoint3 position_1(0.0f, 0.0f, 1.0f, 0.0f);
     cg::Color4  ambient_1(0.0f, 0.0f, 0.0f, 1.0f);
     cg::Color4  diffuse_1(0.7f, 0.7f, 0.7f, 1.0f);
     cg::Color4  specular_1(0.7f, 0.7f, 0.7f, 1.0f);
-    lighting->set_light(1, position_1, ambient_1, diffuse_1, specular_1);
-
-    // Not supporting attenuation or spotlights yet...
+    
+    auto light1 = std::make_shared<cg::LightNode>(1, position_1, ambient_1, diffuse_1, specular_1);
+    camera->add_child(light1);
 }
 
 /**
@@ -607,7 +612,7 @@ void construct_scene()
     g_camera->set_perspective(50.0f, 1.0f, 1.0f, 300.0f);
 
     // Construct fixed scene lighting
-    construct_lighting(shader);
+   construct_lighting(g_camera, shader);
 
     // Construct subdivided square - subdivided 10x in both x and y
     auto unit_square = std::make_shared<cg::UnitSquareSurface>(2, position_loc, normal_loc);
@@ -690,7 +695,25 @@ void construct_scene()
     // Sphere
     auto shiny_sphere = construct_shiny_sphere(position_loc, normal_loc);
 
-    // Construct the scene layout
+   // Construct a torus surface - ring radius 20, tube radius 5
+   // Subdivide by 36 for ring, 18 for tube
+   auto torus = std::make_shared<cg::TorusSurface>(20.0f, 5.0f, 36, 18, position_loc, normal_loc);
+
+   // Shiny black material for torus (no ambient, very little diffuse, mostly specular)
+   auto torus_material = std::make_shared<cg::PresentationNode>(
+       cg::Color4(0.0f, 0.0f, 0.0f),      // Ambient: none
+       cg::Color4(0.1f, 0.1f, 0.1f),      // Diffuse: very little
+       cg::Color4(0.9f, 0.9f, 0.9f),      // Specular: mostly (shiny)
+       cg::Color4(0.0f, 0.0f, 0.0f),      // Emission: none
+       128.0f);                            // High shininess
+   // Construct the scene layout
+   // Position torus along back wall (y=100), rotated to lay against the wall
+   // The back wall is at y=100, centered at z=40
+   // Rotate 90 degrees around X axis to make it lay flat against the wall
+   auto torus_transform = std::make_shared<cg::TransformNode>();
+   torus_transform->translate(0.0f, 95.0f, 40.0f);  // Slightly in front of back wall
+   torus_transform->rotate_x(90.0f);                 // Rotate to lay against wall
+
     g_scene_root = std::make_shared<cg::SceneNode>();
     g_scene_root->add_child(shader);
     shader->add_child(g_camera);
@@ -702,7 +725,9 @@ void construct_scene()
     g_camera->add_child(wood);
     wood->add_child(table_transform);
     table_transform->add_child(table);
-
+   
+   // Add the torus along the back wall
+   add_sub_tree(g_camera, torus_material, torus_transform, torus);
     // Add teapot as a child of the table transform.
     add_sub_tree(table_transform, teapot_material, teapot_transform, teapot);
 
