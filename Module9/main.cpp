@@ -61,6 +61,8 @@ std::shared_ptr<cg::CameraNode> g_camera;
 
 cg::SceneState g_scene_state;
 
+std::shared_ptr<cg::LightNode> g_spotlight;
+
 // While mouse button is down, the view will be updated
 bool    g_animate = false;
 bool    g_forward = true;
@@ -74,6 +76,22 @@ int32_t g_render_height = 600;
 void sleep(int32_t milliseconds)
 {
     std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
+}
+
+void update_spotlight()
+{
+    if(g_spotlight)
+    {
+        // Update spotlight position to camera position
+        const cg::Point3& cam_pos = g_camera->get_position();
+        cg::HPoint3 position(cam_pos.x, cam_pos.y, cam_pos.z, 1.0f);
+        g_spotlight->set_position(position);
+        
+        // Update spotlight direction to view plane normal (direction camera is looking)
+        // Note: view plane normal points FROM the scene TO the camera, so negate it
+        cg::Vector3 direction = g_camera->get_view_plane_normal();
+        g_spotlight->set_spot_direction(direction * -1);
+    }
 }
 
 /**
@@ -126,6 +144,8 @@ void update_view(int32_t x, int32_t y, bool forward)
                        static_cast<float>(g_render_height));
     float dz = (forward) ? g_velocity : -g_velocity;
     g_camera->move_and_turn(dx * g_velocity, dy * g_velocity, dz);
+
+    update_spotlight();
 }
 
 /**
@@ -198,24 +218,29 @@ bool handle_key_event(const SDL_Event &event)
             g_camera->set_position(cg::Point3(0.0f, -100.0f, 20.0f));
             g_camera->set_look_at_pt(cg::Point3(0.0f, 0.0f, 20.0f));
             g_camera->set_view_up(cg::Vector3(0.0f, 0.0f, 1.0f));
+            update_spotlight();
             break;
 
         // roll the camera by 5 degrees
         case SDLK_R:
             if(upper_case) g_camera->roll(-5);
             else g_camera->roll(5);
+            update_spotlight();
             break;
 
         // Change the pitch of the camera by 5 degrees
         case SDLK_P:
             if(upper_case) g_camera->pitch(-5);
             else g_camera->pitch(5);
+            update_spotlight();
             break;
 
         // Change the heading of the camera by 5 degrees
         case SDLK_H:
             if(upper_case) g_camera->heading(-5);
             else g_camera->heading(5);
+            update_spotlight();
+
             break;
 
         // Go faster/slower
@@ -232,18 +257,24 @@ bool handle_key_event(const SDL_Event &event)
         case SDLK_X:
             if(upper_case) g_camera->slide(5.0f, 0.0f, 0.0f);
             else g_camera->slide(-5.0f, 0.0f, 0.0f);
+            update_spotlight();
+
             break;
 
         // Slide up/down
         case SDLK_Y:
             if(upper_case) g_camera->slide(0.0f, 5.0f, 0.0f);
             else g_camera->slide(0.0f, -5.0f, 0.0f);
+            update_spotlight();
+
             break;
 
         // Move forward/backward
         case SDLK_F:
             if(upper_case) g_camera->slide(0.0f, 0.0f, -5.0f);
             else g_camera->slide(0.0f, 0.0f, 5.0f);
+            update_spotlight();
+
             break;
         default: break;
     }
@@ -584,6 +615,22 @@ void construct_lighting(std::shared_ptr<cg::CameraNode> camera,
     
     auto light1 = std::make_shared<cg::LightNode>(1, position_1, ambient_1, diffuse_1, specular_1);
     camera->add_child(light1);
+    //Light 2 - a reddish spotlight at camera position
+    // Aimed along view direction, cutoff 30 degrees, exponent 32
+    // Note: position and direction will be updated when camera moves
+    cg::Point3 cam_pos = camera->get_position();
+    cg::HPoint3 position_2(cam_pos.x, cam_pos.y, cam_pos.z, 1.0f);
+    cg::Color4  ambient_2(0.0f, 0.0f, 0.0f, 1.0f);     // No ambient
+    cg::Color4  diffuse_2(1.0f, 0.0f, 0.0f, 1.0f);     // Reddish diffuse
+    cg::Color4  specular_2(1.0f, 0.0f, 0.0f, 1.0f);    // Reddish specular
+    cg::Vector3 spot_dir = camera->get_view_plane_normal();
+    float       spot_cutoff = 30.0f;
+    float       spot_exponent = 32.0f;
+    
+    g_spotlight = std::make_shared<cg::LightNode>(2, position_2, ambient_2, diffuse_2, specular_2,
+                                                   spot_dir, spot_cutoff, spot_exponent);
+    camera->add_child(g_spotlight);
+
 }
 
 /**
@@ -739,6 +786,8 @@ void construct_scene()
     // Add the vase and sphere
     g_camera->add_child(vase);
     g_camera->add_child(shiny_sphere);
+
+    update_spotlight();
 }
 
 /**

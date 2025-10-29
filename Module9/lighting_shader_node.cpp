@@ -8,86 +8,101 @@ namespace cg
 
 bool LightingShaderNode::get_locations()
 {
-    position_loc_ = glGetAttribLocation(shader_program_.get_program(), "vtx_position");
-    if(position_loc_ < 0)
-    {
-        std::cout << "Error getting vtx_position location\n";
-        return false;
-    }
-    vertex_normal_loc_ = glGetAttribLocation(shader_program_.get_program(), "vtx_normal");
-    if(vertex_normal_loc_ < 0)
-    {
-        std::cout << "Error getting vtx_normal location\n";
-        return false;
-    }
+  position_loc_ = glGetAttribLocation(shader_program_.get_program(), "vtx_position");
+  if(position_loc_ < 0)
+  {
+      std::cout << "Error getting vtx_position location\n";
+      return false;
+  }
+  vertex_normal_loc_ = glGetAttribLocation(shader_program_.get_program(), "vtx_normal");
+  if(vertex_normal_loc_ < 0)
+  {
+      std::cout << "Error getting vtx_normal location\n";
+      return false;
+  }
 
-    pvm_matrix_loc_ = glGetUniformLocation(shader_program_.get_program(), "pvm_matrix");
-    if(pvm_matrix_loc_ < 0)
-    {
-        std::cout << "Error getting pvm_matrix location\n";
-        return false;
-    }
-    model_matrix_loc_ = glGetUniformLocation(shader_program_.get_program(), "model_matrix");
-    if(model_matrix_loc_ < 0)
-    {
-        std::cout << "Error getting model_matrix location\n";
-        return false;
-    }
+  pvm_matrix_loc_ = glGetUniformLocation(shader_program_.get_program(), "pvm_matrix");
+  if(pvm_matrix_loc_ < 0)
+  {
+      std::cout << "Error getting pvm_matrix location\n";
+      return false;
+  }
+  model_matrix_loc_ = glGetUniformLocation(shader_program_.get_program(), "model_matrix");
+  if(model_matrix_loc_ < 0)
+  {
+      std::cout << "Error getting model_matrix location\n";
+      return false;
+  }
 
-    normal_matrix_loc_ = glGetUniformLocation(shader_program_.get_program(), "normal_matrix");
-    if(normal_matrix_loc_ < 0)
-    {
-        std::cout << "Error getting normal_matrix location\n";
-        return false;
-    }
+  normal_matrix_loc_ = glGetUniformLocation(shader_program_.get_program(), "normal_matrix");
+  if(normal_matrix_loc_ < 0)
+  {
+      std::cout << "Error getting normal_matrix location\n";
+      return false;
+  }
+  
+  // Populate camera position uniform location in scene state
+  camera_position_loc = glGetUniformLocation(shader_program_.get_program(), "camera_position");
+  
 
-    // Populate camera position uniform location in scene state
-    camera_position_loc = glGetUniformLocation(shader_program_.get_program(), "camera_position");
+  // Set the number of lights to 2 for now
+  light_count_ = 3;
+  light_count_loc_ = glGetUniformLocation(shader_program_.get_program(), "num_lights");
+  if(light_count_loc_ < 0)
+  {
+      std::cout << "LightingShaderNode: Error getting num_lights location\n";
+  }
 
-    // Set the number of lights to 2 for now
-    light_count_ = 2;
-    light_count_loc_ = glGetUniformLocation(shader_program_.get_program(), "num_lights");
-    if(light_count_loc_ < 0)
-    {
-        std::cout << "LightingShaderNode: Error getting num_lights location\n";
-    }
+  // Get light uniforms
+  char name[128];
+  for(int i = 0; i < light_count_; i++)
+  {
+      snprintf(name, 128, "lights[%d].enabled", i);
+      lights_[i].enabled = glGetUniformLocation(shader_program_.get_program(), name);
 
-    // Get light uniforms
-    char name[128];
-    for(int i = 0; i < light_count_; i++)
-    {
-        snprintf(name, 128, "lights[%d].enabled", i);
-        lights_[i].enabled = glGetUniformLocation(shader_program_.get_program(), name);
-        snprintf(name, 128, "lights[%d].position", i);
-        lights_[i].position = glGetUniformLocation(shader_program_.get_program(), name);
-        snprintf(name, 128, "lights[%d].ambient", i);
-        lights_[i].ambient = glGetUniformLocation(shader_program_.get_program(), name);
-        snprintf(name, 128, "lights[%d].diffuse", i);
-        lights_[i].diffuse = glGetUniformLocation(shader_program_.get_program(), name);
-        snprintf(name, 128, "lights[%d].specular", i);
-        lights_[i].specular = glGetUniformLocation(shader_program_.get_program(), name);
-    }
-    global_ambient_loc_ =
-        glGetUniformLocation(shader_program_.get_program(), "global_light_ambient");
-    if(global_ambient_loc_ < 0)
-    {
-        std::cout << "LightingShaderNode: Error getting global ambient location\n";
-    }
+      //Get spotlight flag location
+      snprintf(name, 128, "lights[%d].spotlight", i);
+      lights_[i].spotlight = glGetUniformLocation(shader_program_.get_program(), name);
 
-    // TODO - may want to check for errors - however any uniforms that are not yet
-    // used will be "optimized out" during the compile and can return loc < 0
+      snprintf(name, 128, "lights[%d].position", i);
+      lights_[i].position = glGetUniformLocation(shader_program_.get_program(), name);
+      snprintf(name, 128, "lights[%d].ambient", i);
+      lights_[i].ambient = glGetUniformLocation(shader_program_.get_program(), name);
+      snprintf(name, 128, "lights[%d].diffuse", i);
+      lights_[i].diffuse = glGetUniformLocation(shader_program_.get_program(), name);
+      snprintf(name, 128, "lights[%d].specular", i);
+      lights_[i].specular = glGetUniformLocation(shader_program_.get_program(), name);
 
-    // Populate material uniform locations in scene state
-    material_ambient_loc_ = glGetUniformLocation(shader_program_.get_program(), "material_ambient");
-    material_diffuse_loc_ = glGetUniformLocation(shader_program_.get_program(), "material_diffuse");
-    material_specular_loc_ =
-        glGetUniformLocation(shader_program_.get_program(), "material_specular");
-    material_emission_loc_ =
-        glGetUniformLocation(shader_program_.get_program(), "material_emission");
-    material_shininess_loc_ =
-        glGetUniformLocation(shader_program_.get_program(), "material_shininess");
+      // Get spotlight parameter locations
+      snprintf(name, 128, "lights[%d].spot_direction", i);
+      lights_[i].spot_direction = glGetUniformLocation(shader_program_.get_program(), name);
+      snprintf(name, 128, "lights[%d].spot_cutoff", i);
+      lights_[i].spot_cutoff = glGetUniformLocation(shader_program_.get_program(), name);
+      snprintf(name, 128, "lights[%d].spot_exponent", i);
+      lights_[i].spot_exponent = glGetUniformLocation(shader_program_.get_program(), name);
+  }
+  global_ambient_loc_ =
+      glGetUniformLocation(shader_program_.get_program(), "global_light_ambient");
+  if(global_ambient_loc_ < 0)
+  {
+      std::cout << "LightingShaderNode: Error getting global ambient location\n";
+  }
 
-    return true;
+
+  // TODO - may want to check for errors - however any uniforms that are not yet
+  // used will be "optimized out" during the compile and can return loc < 0
+
+  // Populate material uniform locations in scene state
+  material_ambient_loc_ = glGetUniformLocation(shader_program_.get_program(), "material_ambient");
+  material_diffuse_loc_ = glGetUniformLocation(shader_program_.get_program(), "material_diffuse");
+  material_specular_loc_ =
+      glGetUniformLocation(shader_program_.get_program(), "material_specular");
+  material_emission_loc_ =
+      glGetUniformLocation(shader_program_.get_program(), "material_emission");
+  material_shininess_loc_ =
+      glGetUniformLocation(shader_program_.get_program(), "material_shininess");
+
+  return true;
 }
 
 void LightingShaderNode::draw(SceneState &scene_state)

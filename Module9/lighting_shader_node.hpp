@@ -75,7 +75,7 @@ class LightingShaderNode : public ShaderNode
     int32_t       light_count_;        // Number of lights
     GLint         light_count_loc_;    // Light count uniform locations
     GLint         global_ambient_loc_; // Global ambient uniform location
-    LightUniforms lights_[2];          // Light source uniform locations
+    LightUniforms lights_[3];          // Light source uniform locations
 };
 
 } // namespace cg

@@ -31,6 +31,9 @@ struct LightUniforms
     GLint ambient;
     GLint diffuse;
     GLint specular;
+    GLint spot_direction;
+    GLint spot_cutoff;
+    GLint spot_exponent;
 };
 
 /**
@@ -60,7 +63,7 @@ struct SceneState
     GLint material_shininess_loc; // Material shininess location
 
     // Lights
-    LightUniforms lights[2];
+    LightUniforms lights[3];
 
     // Current matrices
     std::array<float, 16> ortho;        // Orthographic projection matrix (2-D)
